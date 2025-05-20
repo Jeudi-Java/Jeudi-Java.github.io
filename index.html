@@ -25,8 +25,12 @@
             }));
           }
           Promise.all(pagePromises).then(pagesText => {
-            callback(pagesText.join(' '));
+            const fullText = pagesText.join(' ');
+            console.log("Extracted Text:", fullText); // debug log
+            callback(fullText);
           });
+        }).catch(err => {
+          alert("❌ Failed to read PDF: " + err.message);
         });
       };
       reader.readAsArrayBuffer(file);
@@ -35,11 +39,15 @@
     function verifyCertificate() {
       const file = document.getElementById('fileInput').files[0];
       if (!file) {
-        alert("Please upload a PDF file.");
+        alert("⚠️ Please upload a PDF file.");
         return;
       }
 
+      alert("📥 File uploaded: " + file.name); // Debug
+
       extractTextFromPDF(file, function(extractedText) {
+        alert("📄 PDF text extracted."); // Debug
+
         const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
 
         const match = extractedText.match(regex);
@@ -49,9 +57,9 @@
           const credits = match[3];
           const date = match[4];
 
-          alert(`✅ Certificate is valid for ${name}\n\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
+          alert(`✅ Valid certificate for ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
         } else {
-          alert("❌ Certificate is not valid or format is incorrect.");
+          alert("❌ Certificate format not recognized.");
         }
       });
     }
