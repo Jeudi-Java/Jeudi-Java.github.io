@@ -9,7 +9,6 @@
   <h2>Upload PDF Certificate to Verify</h2>
   <input type="file" id="fileInput" accept="application/pdf"><br><br>
   <button onclick="verifyCertificate()">Verify</button>
-  <p id="result"></p>
 
   <script>
     function extractTextFromPDF(file, callback) {
@@ -36,13 +35,13 @@
     function verifyCertificate() {
       const file = document.getElementById('fileInput').files[0];
       if (!file) {
-        document.getElementById('result').textContent = "Please upload a PDF file.";
+        alert("Please upload a PDF file.");
         return;
       }
 
       extractTextFromPDF(file, function(extractedText) {
         const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
-        
+
         const match = extractedText.match(regex);
         if (match) {
           const name = match[1];
@@ -50,17 +49,12 @@
           const credits = match[3];
           const date = match[4];
 
-          // Optional: log them
-          console.log({ name, creditType, credits, date });
-
-          // Redirect if valid
-          window.location.href = "https://google.ca"; // Replace this with your real redirect URL
+          alert(`✅ Certificate is valid for ${name}\n\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
         } else {
-          document.getElementById('result').textContent = "❌ Certificate does not match the required format.";
+          alert("❌ Certificate is not valid or format is incorrect.");
         }
       });
     }
   </script>
 </body>
 </html>
-
