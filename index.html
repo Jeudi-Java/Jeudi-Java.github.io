@@ -46,23 +46,62 @@
 
       alert("📥 File uploaded: " + file.name); // Debug
 
-      extractTextFromPDF(file, function(extractedText) {
-        alert("📄 PDF text extracted."); // Debug
+      function verifyCertificate() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) {
+    alert("⚠️ Please upload a PDF file.");
+    return;
+  }
 
-        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
+  alert("📥 File uploaded: " + file.name); // Debug
 
-        const match = extractedText.match(regex);
-        if (match) {
-          const name = match[1];
-          const creditType = match[2];
-          const credits = match[3];
-          const date = match[4];
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const typedarray = new Uint8Array(event.target.result);
 
-          alert(`✅ Valid certificate for ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
-        } else {
-          alert("❌ Certificate format not recognized.");
+    pdfjsLib.getDocument(typedarray).promise
+      .then(pdf => {
+        alert("📘 PDF loaded: " + pdf.numPages + " page(s)");
+
+        let pages = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          pages.push(pdf.getPage(i).then(page => {
+            return page.getTextContent().then(content => {
+              return content.items.map(item => item.str).join(' ');
+            });
+          }));
         }
+
+        Promise.all(pages).then(textPages => {
+          const fullText = textPages.join(' ');
+          console.log("📝 Extracted text:", fullText);
+          alert("📄 Text extracted. Checking...");
+
+          const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
+
+          const match = fullText.match(regex);
+          if (match) {
+            const name = match[1];
+            const creditType = match[2];
+            const credits = match[3];
+            const date = match[4];
+
+            alert(`✅ Valid certificate for ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
+          } else {
+            alert("❌ Certificate format not recognized.");
+          }
+        });
+
+      })
+      .catch(err => {
+        alert("❌ Error loading PDF: " + err.message);
+        console.error(err);
       });
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
     }
   </script>
 </body>
