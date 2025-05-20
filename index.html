@@ -12,17 +12,13 @@
   <p id="result"></p>
 
   <script>
-    const template = "This certifies that [NAME] has completed the AI Fundamentals Course on May 2025.";
-
     function extractTextFromPDF(file, callback) {
       const reader = new FileReader();
       reader.onload = function(event) {
         const typedarray = new Uint8Array(event.target.result);
         pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-          let text = '';
-          const numPages = pdf.numPages;
           let pagePromises = [];
-          for (let i = 1; i <= numPages; i++) {
+          for (let i = 1; i <= pdf.numPages; i++) {
             pagePromises.push(pdf.getPage(i).then(page => {
               return page.getTextContent().then(textContent => {
                 return textContent.items.map(item => item.str).join(' ');
@@ -45,16 +41,26 @@
       }
 
       extractTextFromPDF(file, function(extractedText) {
-        const regex = new RegExp("^This certifies that (.+?) has completed the AI Fundamentals Course on May 2025\\.");
+        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
+        
         const match = extractedText.match(regex);
         if (match) {
           const name = match[1];
-          document.getElementById('result').textContent = `✅ Valid certificate for ${name}`;
+          const creditType = match[2];
+          const credits = match[3];
+          const date = match[4];
+
+          // Optional: log them
+          console.log({ name, creditType, credits, date });
+
+          // Redirect if valid
+          window.location.href = "https://example.com/success"; // Replace this with your real redirect URL
         } else {
-          document.getElementById('result').textContent = "❌ Certificate does not match the template.";
+          document.getElementById('result').textContent = "❌ Certificate does not match the required format.";
         }
       });
     }
   </script>
 </body>
 </html>
+
