@@ -1,38 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>PDF.js Test</title>
+  <meta charset="UTF-8">
+  <title>Certificate Verifier</title>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 30px;
+    }
+    input, button {
+      font-size: 1rem;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h2>PDF.js Load Test</h2>
-  <input type="file" id="fileInput" accept="application/pdf">
-  <button onclick="testPDF()">Test PDF</button>
+  <h2>Upload a Certificate PDF</h2>
+  <input type="file" id="fileInput" accept="application/pdf"><br>
+  <button onclick="verifyCertificate()">Verify</button>
   <p id="status"></p>
 
   <script>
-    // ✅ Set correct worker path
+    // ✅ Set correct worker for PDF.js
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
 
-    function testPDF() {
+    function verifyCertificate() {
       const file = document.getElementById('fileInput').files[0];
-      const status = document.getElementById('status');
-
       if (!file) {
-        alert("Please upload a file.");
+        alert("⚠️ Please upload a PDF file.");
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = function (e) {
+      reader.onload = function(e) {
         const typedArray = new Uint8Array(e.target.result);
 
         pdfjsLib.getDocument(typedArray).promise.then(pdf => {
-          status.textContent = `✅ PDF loaded with ${pdf.numPages} page(s).`;
+          const pagePromises = [];
+          for (let i = 1; i <= pdf.numPages; i++) {
+            pagePromises.push(
+              pdf.getPage(i).then(page => {
+                return page.getTextContent().then(content => {
+                  return content.items.map(item => item.str).join(' ');
+                });
+              })
+            );
+          }
+
+          Promise.all(pagePromises).then(pages => {
+            const fullText = pages.join(' ');
+            console.log("Extracted Text:", fullText);
+
+            // Regex to match dynamic content
+            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
+
+            const match = fullText.match(regex);
+            if (match) {
+              const name = match[1].trim();
+              const creditType = match[2].trim();
+              const credits = match[3].trim();
+              const date = match[4].trim();
+
+              alert(`✅ Valid certificate for ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`);
+              // Optional: redirect after success
+              // window.location.href = "https://example.com/next-page";
+            } else {
+              alert("❌ Certificate format not recognized. Please try another file.");
+            }
+          });
         }).catch(err => {
-          status.textContent = `❌ Failed to load PDF: ${err.message}`;
+          alert("❌ Error loading PDF: " + err.message);
           console.error(err);
         });
+      };
+
+      reader.onerror = function () {
+        alert("❌ File could not be read.");
       };
 
       reader.readAsArrayBuffer(file);
