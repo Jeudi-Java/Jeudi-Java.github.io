@@ -53,7 +53,7 @@
             console.log("Extracted Text:", fullText);
 
             // Regex to match dynamic content
-            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s*Diamine Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s*PARTICIPANT INFORMATION:\s*Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION:\s*Powered by TCPDF \(www\.tcpdf\.org\)/;
+            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Silver\s+Diamine\s+Flouride presented by Smiles for Life, a National Oral Health Curriculum\.\s+PARTICIPANT INFORMATION:\s+Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?) \| Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION:\s+Powered by TCPDF/;
 
             const match = fullText.match(regex);
             if (match) {
