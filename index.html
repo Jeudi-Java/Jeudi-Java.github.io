@@ -1,29 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>PDF Load Test</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js"></script>
+  <title>PDF.js Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.min.js"></script>
 </head>
 <body>
+  <h2>PDF.js Load Test</h2>
   <input type="file" id="fileInput" accept="application/pdf">
-  <button onclick="testPDF()">Test PDF Load</button>
+  <button onclick="testPDF()">Test PDF</button>
+  <p id="status"></p>
 
   <script>
+    // ✅ Set correct worker path
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
+
     function testPDF() {
       const file = document.getElementById('fileInput').files[0];
+      const status = document.getElementById('status');
+
       if (!file) {
-        alert("No file selected");
+        alert("Please upload a file.");
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = function(e) {
-        const typedarray = new Uint8Array(e.target.result);
+      reader.onload = function (e) {
+        const typedArray = new Uint8Array(e.target.result);
 
-        pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-          alert("✅ PDF loaded with " + pdf.numPages + " page(s)");
+        pdfjsLib.getDocument(typedArray).promise.then(pdf => {
+          status.textContent = `✅ PDF loaded with ${pdf.numPages} page(s).`;
         }).catch(err => {
-          alert("❌ PDF failed to load:\n" + err.message);
+          status.textContent = `❌ Failed to load PDF: ${err.message}`;
           console.error(err);
         });
       };
