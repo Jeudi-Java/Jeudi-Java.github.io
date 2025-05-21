@@ -38,6 +38,9 @@
         return;
       }
 
+      // ✅ Open a blank tab immediately — satisfies browser popup policy
+      const newTab = window.open("about:blank");
+
       const reader = new FileReader();
       reader.onload = function (e) {
         const typedArray = new Uint8Array(e.target.result);
@@ -76,23 +79,22 @@ Credits: ${credits}
 Date: ${date}
 \nRedirecting...`;
 
-              // ✅ Open new tab only after validation
-              const newTab = window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
-              if (!newTab) {
-                status.textContent += "\n⚠️ Popup blocked. Please allow popups for this site.";
-              }
-
+              // ✅ Redirect the tab to the final page
+              newTab.location.href = "https://cariesriskassessment.wixsite.com/my-site/general-6";
             } else {
               status.textContent = "❌ This certificate is not from the approved module.";
+              newTab.close(); // ✅ Close the unused tab
             }
           });
         }).catch(err => {
           status.textContent = "❌ Error reading PDF: " + err.message;
+          newTab.close();
         });
       };
 
       reader.onerror = function () {
         status.textContent = "❌ File could not be read.";
+        newTab.close();
       };
 
       reader.readAsArrayBuffer(file);
