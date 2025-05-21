@@ -62,9 +62,12 @@
             console.log("Extracted Text:", fullText); // Debugging output
 
             // Match only the specific "Caries Risk Assessment, Fluoride Varnish, and Counseling" module
-            const regex = /certifies that.*?titled\s*Caries\s*Risk\s*Assessment[,]?\s*Fluoride\s*Varnish[,]?\s*and\s*Counseling\s*presented by Smiles for Life.*?Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION:.*?TCPDF/i;
+            const normalizedText = fullText.replace(/\s+/g, ' ').trim();
 
-            const match = fullText.match(regex);
+            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?)\s*Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION: Powered by TCPDF/i;
+            
+            const match = normalizedText.match(regex);
+            
 
             if (match) {
               const name = match[1].trim();
