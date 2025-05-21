@@ -38,9 +38,6 @@
         return;
       }
 
-      // ✅ Open new blank tab right away
-      const win = window.open('', '_blank');
-
       const reader = new FileReader();
       reader.onload = function (e) {
         const typedArray = new Uint8Array(e.target.result);
@@ -62,7 +59,6 @@
             const fullText = pages.join(' ');
             const normalized = fullText.replace(/\s+/g, ' ').trim();
 
-            // Strict but flexible match for the specific module
             const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
 
             const match = normalized.match(regex);
@@ -80,22 +76,23 @@ Credits: ${credits}
 Date: ${date}
 \nRedirecting...`;
 
-              // ✅ Navigate new tab to destination
-              win.location.href = "https://cariesriskassessment.wixsite.com/my-site/general-6";
+              // ✅ Open new tab only after validation
+              const newTab = window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
+              if (!newTab) {
+                status.textContent += "\n⚠️ Popup blocked. Please allow popups for this site.";
+              }
+
             } else {
               status.textContent = "❌ This certificate is not from the approved module.";
-              win.close(); // close unused tab
             }
           });
         }).catch(err => {
           status.textContent = "❌ Error reading PDF: " + err.message;
-          win.close();
         });
       };
 
       reader.onerror = function () {
         status.textContent = "❌ File could not be read.";
-        win.close();
       };
 
       reader.readAsArrayBuffer(file);
