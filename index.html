@@ -30,70 +30,76 @@
     // Configure PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
 
-    function verifyCertificate() {
-      const file = document.getElementById('fileInput').files[0];
-      const status = document.getElementById('status');
-      status.textContent = '';
+   function verifyCertificate() {
+  const file = document.getElementById('fileInput').files[0];
+  const status = document.getElementById('status');
+  status.textContent = '';
 
-      if (!file) {
-        alert("⚠️ Please upload a PDF file.");
-        return;
+  if (!file) {
+    alert("⚠️ Please upload a PDF file.");
+    return;
+  }
+
+  // ✅ Open a new blank tab immediately
+  const win = window.open('', '_blank');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const typedArray = new Uint8Array(e.target.result);
+
+    pdfjsLib.getDocument(typedArray).promise.then(pdf => {
+      const pagePromises = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        pagePromises.push(
+          pdf.getPage(i).then(page =>
+            page.getTextContent().then(content =>
+              content.items.map(item => item.str).join(' ')
+            )
+          ) 
+        );
       }
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const typedArray = new Uint8Array(e.target.result);
+      Promise.all(pagePromises).then(pages => {
+        const fullText = pages.join(' ');
+        console.log("Extracted Text:", fullText);
 
-        pdfjsLib.getDocument(typedArray).promise.then(pdf => {
-          const pagePromises = [];
+        const normalizedText = fullText.replace(/\s+/g, ' ').trim();
 
-          for (let i = 1; i <= pdf.numPages; i++) {
-            pagePromises.push(
-              pdf.getPage(i).then(page =>
-                page.getTextContent().then(content =>
-                  content.items.map(item => item.str).join(' ')
-                )
-              ) 
-            );
-          }
+        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?)\s*Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION: Powered by TCPDF/i;
+        
+        const match = normalizedText.match(regex);
 
-          Promise.all(pagePromises).then(pages => {
-            const fullText = pages.join(' ');
-            console.log("Extracted Text:", fullText); // Debugging output
+        if (match) {
+          const name = match[1].trim();
+          const creditType = match[2].trim();
+          const credits = match[3].trim();
+          const date = match[4].trim();
 
-            // Match only the specific "Caries Risk Assessment, Fluoride Varnish, and Counseling" module
-            const normalizedText = fullText.replace(/\s+/g, ' ').trim();
+          status.textContent =
+            `✅ Valid certificate\nModule: Caries Risk Assessment, Fluoride Varnish, and Counseling\nName: ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`;
 
-            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s*Credit Type:\s*(.+?)\s*Credits:\s*(.+?)\s*Certificate Date:\s*(.+?)\s*PROVIDER INFORMATION: Powered by TCPDF/i;
-            
-            const match = normalizedText.match(regex);
-            
+          // ✅ Redirect previously opened tab
+          win.location.href = "https://cariesriskassessment.wixsite.com/my-site/general-6";
+        } else {
+          status.textContent = "❌ This certificate is not from the approved module.";
+          // Optionally close the tab if invalid
+          win.close();
+        }
+      });
+    }).catch(err => {
+      status.textContent = "❌ Error reading PDF: " + err.message;
+      win.close();
+    });
+  };
 
-            if (match) {
-              const name = match[1].trim();
-              const creditType = match[2].trim();
-              const credits = match[3].trim();
-              const date = match[4].trim();
+  reader.onerror = function () {
+    status.textContent = "❌ File could not be read.";
+    win.close();
+  };
 
-              status.textContent =
-                `✅ Valid certificate\nModule: Caries Risk Assessment, Fluoride Varnish, and Counseling\nName: ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`;
-              
-                window.open("https://cariesriskassessment.wixsite.com/my-site/general-6","_blank");
-            } else {
-              status.textContent = "❌ This certificate is not from the approved module.";
-            }
-          });
-        }).catch(err => {
-          status.textContent = "❌ Error reading PDF: " + err.message;
-        });
-      };
-
-      reader.onerror = function () {
-        status.textContent = "❌ File could not be read.";
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
+  reader.readAsArrayBuffer(file);
+}
   </script>
 </body>
 </html>
