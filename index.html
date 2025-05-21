@@ -78,7 +78,7 @@
               status.textContent =
                 `✅ Valid certificate\nModule: Caries Risk Assessment, Fluoride Varnish, and Counseling\nName: ${name}\nType: ${creditType}\nCredits: ${credits}\nDate: ${date}`;
               setTimeout(() => {
-                window.open("https://cariesriskassessment.wixsite.com/my-site/general-6"); 
+                window.top.open("https://cariesriskassessment.wixsite.com/my-site/general-6"); 
               }, 3000);
             } else {
               status.textContent = "❌ This certificate is not from the approved module.";
