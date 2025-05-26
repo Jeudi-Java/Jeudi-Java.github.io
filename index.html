@@ -17,6 +17,10 @@
       margin-top: 20px;
       white-space: pre-line;
     }
+    #proceedBtn {
+      display: none;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -24,81 +28,91 @@
   <input type="file" id="fileInput" accept="application/pdf"><br>
   <button id="verifyBtn">Verify</button>
   <p id="status"></p>
+  <button id="proceedBtn" onclick="proceed()">Proceed</button>
 
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
 
-    document.getElementById("verifyBtn").addEventListener("click", () => {
+    document.getElementById("verifyBtn").addEventListener("click", async () => {
       const file = document.getElementById('fileInput').files[0];
       const status = document.getElementById('status');
+      const proceedBtn = document.getElementById('proceedBtn');
+
+      // Reset UI
       status.textContent = '';
+      proceedBtn.style.display = 'none';
 
       if (!file) {
         alert("⚠️ Please upload a PDF file.");
         return;
       }
 
-      // ✅ Open a blank tab immediately — satisfies browser popup policy
-      const newTab = window.open("about:blank");
+      try {
+        const fullText = await extractTextFromPDF(file);
+        const normalized = fullText.replace(/\s+/g, ' ').trim();
 
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const typedArray = new Uint8Array(e.target.result);
+        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
 
-        pdfjsLib.getDocument(typedArray).promise.then(pdf => {
-          const pagePromises = [];
+        const match = normalized.match(regex);
 
-          for (let i = 1; i <= pdf.numPages; i++) {
-            pagePromises.push(
-              pdf.getPage(i).then(page =>
-                page.getTextContent().then(content =>
-                  content.items.map(item => item.str).join(' ')
-                )
-              )
-            );
-          }
+        if (match) {
+          const name = match[1].trim();
+          const creditType = match[2].trim();
+          const credits = match[3].trim();
+          const date = match[4].trim();
 
-          Promise.all(pagePromises).then(pages => {
-            const fullText = pages.join(' ');
-            const normalized = fullText.replace(/\s+/g, ' ').trim();
-
-            const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
-
-            const match = normalized.match(regex);
-
-            if (match) {
-              const name = match[1].trim();
-              const creditType = match[2].trim();
-              const credits = match[3].trim();
-              const date = match[4].trim();
-
-              status.textContent = `✅ Valid certificate for ${name}
+          status.textContent = `✅ Valid certificate for ${name}
 Module: Caries Risk Assessment, Fluoride Varnish, and Counseling
 Type: ${creditType}
 Credits: ${credits}
-Date: ${date}
-\nRedirecting...`;
+Date: ${date}`;
 
-              // ✅ Redirect the tab to the final page
-              newTab.location.href = "https://cariesriskassessment.wixsite.com/my-site/general-6";
-            } else {
-              status.textContent = "❌ This certificate is not from the approved module.";
-              newTab.close(); // ✅ Close the unused tab
-            }
-          });
-        }).catch(err => {
-          status.textContent = "❌ Error reading PDF: " + err.message;
-          newTab.close();
-        });
-      };
+          // ✅ Show the Proceed button
+          proceedBtn.style.display = 'inline-block';
+        } else {
+          status.textContent = "❌ This certificate is not from the approved module.";
+        }
 
-      reader.onerror = function () {
-        status.textContent = "❌ File could not be read.";
-        newTab.close();
-      };
-
-      reader.readAsArrayBuffer(file);
+      } catch (err) {
+        status.textContent = "❌ Error reading PDF: " + err.message;
+      }
     });
+
+    function proceed() {
+      window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
+    }
+
+    // PDF text extraction function
+    async function extractTextFromPDF(file) {
+      const reader = new FileReader();
+
+      return new Promise((resolve, reject) => {
+        reader.onload = function (e) {
+          const typedArray = new Uint8Array(e.target.result);
+
+          pdfjsLib.getDocument(typedArray).promise.then(pdf => {
+            const promises = [];
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              promises.push(
+                pdf.getPage(i).then(page =>
+                  page.getTextContent().then(content =>
+                    content.items.map(item => item.str).join(' ')
+                  )
+                )
+              );
+            }
+
+            Promise.all(promises).then(pages => {
+              resolve(pages.join(' '));
+            }).catch(reject);
+          }).catch(reject);
+        };
+
+        reader.onerror = () => reject(new Error("File could not be read."));
+        reader.readAsArrayBuffer(file);
+      });
+    }
   </script>
 </body>
 </html>
