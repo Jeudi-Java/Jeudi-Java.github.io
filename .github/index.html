@@ -2,58 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Certificate Verifier</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.1.62/pdf.min.js"></script>
+  <title>Certificate Verifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 30px;
+    }
+    input, button {
+      font-size: 1rem;
+      margin-top: 10px;
+    }
+    #status {
+      margin-top: 20px;
+      white-space: pre-line;
+    }
+  </style>
 </head>
 <body>
-  <h2>Upload PDF Certificate to Verify</h2>
-  <input type="file" id="fileInput" accept="application/pdf"><br><br>
-  <button onclick="verifyCertificate()">Verify</button>
-  <p id="result"></p>
+  <h2>Upload a Certificate PDF</h2>
+  <input type="file" id="fileInput" accept="application/pdf"><br>
+  <button id="verifyBtn">Verify</button>
+  <p id="status"></p>
 
   <script>
-    const template = "This certifies that [NAME] has completed the AI Fundamentals Course on May 2025.";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
 
-    function extractTextFromPDF(file, callback) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const typedarray = new Uint8Array(event.target.result);
-        pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-          let text = '';
-          const numPages = pdf.numPages;
-          let pagePromises = [];
-          for (let i = 1; i <= numPages; i++) {
-            pagePromises.push(pdf.getPage(i).then(page => {
-              return page.getTextContent().then(textContent => {
-                return textContent.items.map(item => item.str).join(' ');
-              });
-            }));
-          }
-          Promise.all(pagePromises).then(pagesText => {
-            callback(pagesText.join(' '));
-          });
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function verifyCertificate() {
+    document.getElementById("verifyBtn").addEventListener("click", async () => {
       const file = document.getElementById('fileInput').files[0];
+      const status = document.getElementById('status');
+      status.textContent = '';
+
       if (!file) {
-        document.getElementById('result').textContent = "Please upload a PDF file.";
+        alert("⚠️ Please upload a PDF file.");
         return;
       }
 
-      extractTextFromPDF(file, function(extractedText) {
-        const regex = new RegExp("^This certifies that (.+?) has completed the AI Fundamentals Course on May 2025\\.$");
-        const match = extractedText.match(regex);
+      try {
+        const fullText = await extractTextFromPDF(file);
+        const normalized = fullText.replace(/\s+/g, ' ').trim();
+
+        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
+
+        const match = normalized.match(regex);
+
         if (match) {
-          const name = match[1];
-          document.getElementById('result').textContent = `Valid certificate for ${name}`;
+          const name = match[1].trim();
+          const creditType = match[2].trim();
+          const credits = match[3].trim();
+          const date = match[4].trim();
+
+          status.textContent = `✅ Valid certificate for ${name}
+Module: Caries Risk Assessment, Fluoride Varnish, and Counseling
+Type: ${creditType}
+Credits: ${credits}
+Date: ${date}
+\nOpening...`;
+
+          // ✅ Now open the site (only if valid)
+          window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
         } else {
-          document.getElementById('result').textContent = "Certificate does not match the template.";
+          status.textContent = "❌ This certificate is not from the approved module.";
         }
+
+      } catch (err) {
+        status.textContent = "❌ Error reading PDF: " + err.message;
+      }
+    });
+
+    // Extracts full text from PDF
+    async function extractTextFromPDF(file) {
+      const reader = new FileReader();
+
+      return new Promise((resolve, reject) => {
+        reader.onload = function (e) {
+          const typedArray = new Uint8Array(e.target.result);
+
+          pdfjsLib.getDocument(typedArray).promise.then(pdf => {
+            const promises = [];
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              promises.push(
+                pdf.getPage(i).then(page =>
+                  page.getTextContent().then(content =>
+                    content.items.map(item => item.str).join(' ')
+                  )
+                )
+              );
+            }
+
+            Promise.all(promises).then(pages => {
+              resolve(pages.join(' '));
+            }).catch(reject);
+          }).catch(reject);
+        };
+
+        reader.onerror = () => reject(new Error("File could not be read."));
+        reader.readAsArrayBuffer(file);
       });
     }
   </script>
