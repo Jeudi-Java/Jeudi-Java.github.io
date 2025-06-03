@@ -13,64 +13,96 @@
       font-size: 1rem;
       margin-top: 10px;
     }
-    #status {
+    .status-section {
       margin-top: 20px;
-      white-space: pre-line;
+    }
+    .valid, .invalid {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .valid {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .invalid {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    ul {
+      margin: 0;
+      padding-left: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>Upload a Certificate PDF</h2>
-  <input type="file" id="fileInput" accept="application/pdf"><br>
-  <button id="verifyBtn">Verify</button>
-  <p id="status"></p>
+  <h2>Upload Certificate PDFs</h2>
+  <input type="file" id="fileInput" accept="application/pdf" multiple><br>
+  <button id="verifyBtn">Verify All</button>
+
+  <div class="status-section">
+    <div class="valid" id="validList">
+      <strong>✅ Valid Certificates:</strong>
+      <ul></ul>
+    </div>
+    <div class="invalid" id="invalidList">
+      <strong>❌ Invalid Certificates:</strong>
+      <ul></ul>
+    </div>
+  </div>
 
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.1.81/build/pdf.worker.min.js';
 
     document.getElementById("verifyBtn").addEventListener("click", async () => {
-      const file = document.getElementById('fileInput').files[0];
-      const status = document.getElementById('status');
-      status.textContent = '';
+      const files = document.getElementById('fileInput').files;
+      const validList = document.getElementById('validList').querySelector('ul');
+      const invalidList = document.getElementById('invalidList').querySelector('ul');
 
-      if (!file) {
-        alert("⚠️ Please upload a PDF file.");
+      validList.innerHTML = '';
+      invalidList.innerHTML = '';
+
+      if (files.length === 0) {
+        alert("⚠️ Please upload at least one PDF file.");
         return;
       }
 
-      try {
-        const fullText = await extractTextFromPDF(file);
-        const normalized = fullText.replace(/\s+/g, ' ').trim();
+      for (const file of files) {
+        try {
+          const fullText = await extractTextFromPDF(file);
+          const normalized = fullText.replace(/\s+/g, ' ').trim();
 
-        const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
+          const regex = /The Society of Teachers of Family Medicine certifies that the participant below has completed the educational activity titled Caries Risk Assessment, Fluoride Varnish, and Counseling presented by Smiles for Life, a National Oral Health Curriculum\. PARTICIPANT INFORMATION: Name:\s*(.+?)\s+Credit Type:\s*(.+?)\s+Credits:\s*(.+?)\s+Certificate Date:\s*(.+?)\s+PROVIDER INFORMATION: Powered by TCPDF/i;
 
-        const match = normalized.match(regex);
+          const match = normalized.match(regex);
 
-        if (match) {
-          const name = match[1].trim();
-          const creditType = match[2].trim();
-          const credits = match[3].trim();
-          const date = match[4].trim();
+          if (match) {
+            const name = match[1].trim();
+            const creditType = match[2].trim();
+            const credits = match[3].trim();
+            const date = match[4].trim();
 
-          status.textContent = `✅ Valid certificate for ${name}
-Module: Caries Risk Assessment, Fluoride Varnish, and Counseling
-Type: ${creditType}
-Credits: ${credits}
-Date: ${date}
-\nOpening...`;
+            const li = document.createElement('li');
+            li.textContent = `${name} (${credits} ${creditType}, Date: ${date})`;
+            validList.appendChild(li);
 
-          // ✅ Now open the site (only if valid)
-          window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
-        } else {
-          status.textContent = "❌ This certificate is not from the approved module.";
+            // Optionally, open the page for each valid file:
+            // window.open("https://cariesriskassessment.wixsite.com/my-site/general-6", "_blank");
+          } else {
+            const li = document.createElement('li');
+            li.textContent = `${file.name} – Not a valid certificate`;
+            invalidList.appendChild(li);
+          }
+        } catch (err) {
+          const li = document.createElement('li');
+          li.textContent = `${file.name} – Error reading PDF: ${err.message}`;
+          invalidList.appendChild(li);
         }
-
-      } catch (err) {
-        status.textContent = "❌ Error reading PDF: " + err.message;
       }
     });
 
-    // Extracts full text from PDF
     async function extractTextFromPDF(file) {
       const reader = new FileReader();
 
